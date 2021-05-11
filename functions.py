@@ -1,4 +1,5 @@
 def get_valid_moves(board):
+# returns a list of columns that are not yet full
     valid_moves = []
     cols = board.shape[1]
     for col in range(cols):
@@ -7,6 +8,7 @@ def get_valid_moves(board):
     return valid_moves
 
 def get_next_board(board, col, mark):
+# returns the state of the next board if player mark drops a piece in column col
     next_board = board.copy()
     rows = len(next_board)
     for row in range(rows - 1, -1, -1):
@@ -16,76 +18,87 @@ def get_next_board(board, col, mark):
     return next_board
 
 def count_window(board, window_size, num_discs, mark):
+# for the entire game board, checks horizontal, vertical, and diagonal windows of window_size tiles.
+# returns the number of total windows in a board that have num_discs pieces belonging to player 'mark' and the rest of the window is empty
     def check_window(window, window_size, num_discs, mark):
-        c1 = window.count(mark) == num_discs
-        c2 = window.count(0) == (window_size - num_discs)
-        return c1 and c2
+        # slightly more efficient "and" check of both conditions
+        if not ((window == mark).sum() == num_discs):  # condition 1: number of discs in the window belong to the player
+            return False
+        return ((window == 0).sum() == (window_size - num_discs))  # condition 2: the rest of the tiles in the window are empty
     rows, cols = board.shape
     count = 0
     # horizontal
     for row in range(rows):
         for col in range(cols - window_size + 1):
-            window = [val for val in board[row, col:col + window_size]]
+            window = board[row, col:col + window_size]
             if check_window(window, window_size, num_discs, mark):
                 count += 1
     # vertical
     for row in range(rows - window_size + 1):
         for col in range(cols):
-            window = [val for val in board[row:row + window_size, col]]
+            window = board[row:row + window_size, col]
             if check_window(window, window_size, num_discs, mark):
                 count += 1
     # diagonal
     for row in range(rows - window_size + 1):
         for col in range(cols - window_size + 1):
-            window = [val for val in board[range(row, row + window_size), range(col, col + window_size)]]
+            window = board[range(row, row + window_size), range(col, col + window_size)]
             if check_window(window, window_size, num_discs, mark):
                 count += 1
     # off-diagonal
     for row in range(window_size - 1, rows):
         for col in range(cols - window_size + 1):
-            window = [val for val in board[range(row, row - window_size, -1), range(col, col + window_size)]]
+            window = board[range(row, row - window_size, -1), range(col, col + window_size)]
             if check_window(window, window_size, num_discs, mark):
                 count += 1
     return count
 
-def get_winning_moves(board, x, mark):
+def get_winning_moves(board, inarow, mark):
+# returns a list of columns that will result in a game win if they exist
     valid_moves = get_valid_moves(board=board)
     winning_moves = []
     for col in valid_moves:
         next_board = get_next_board(board=board, col=col, mark=mark)
-        if count_window(board=next_board, window_size=x, num_discs=x, mark=mark):
+        if count_window(board=next_board, window_size=inarow, num_discs=inarow, mark=mark):
             winning_moves.append(col)
     return winning_moves
 
-def get_blocking_moves(board, x, mark):
+def get_blocking_moves(board, inarow, mark):
+# returns a list of columns that block an opponent's imminent win in the next turn
     valid_moves = get_valid_moves(board=board)
     blocking_moves = []
-    opp = 3 - mark
+    opp = 3 - mark  # opponents mark. 1 --> 2, and 2 --> 1
     for col in valid_moves:
         next_board = get_next_board(board=board, col=col, mark=opp)
-        if count_window(board=next_board, window_size=x, num_discs=x, mark=opp):
+        if count_window(board=next_board, window_size=inarow, num_discs=inarow, mark=opp):
             blocking_moves.append(col)
     return blocking_moves
 
-def get_enabling_moves(board, x, mark):  # this maybe makes get_blocking_moves redundant
+def get_enabling_moves(board, inarow, mark):  # this might make get_blocking_moves redundant
+# returns a list of columns that enable the opponent to make a winning move in the next turn
+# the elements in this list later get removed from the list of potential valid moves, to avoid enabling an opponent win
     valid_moves = get_valid_moves(board=board)
     enabling_moves = []
-    opp = 3 - mark
+    opp = 3 - mark  # opponents mark. 1 --> 2, and 2 --> 1
     for col in valid_moves:
         next_board = get_next_board(board=board, col=col, mark=mark)
-        if get_winning_moves(board=next_board, x=x, mark=opp):
+        if get_winning_moves(board=next_board, inarow=inarow, mark=opp):
             enabling_moves.append(col)
     return enabling_moves
 
-def evaluate_board(board, mark, x):
+def evaluate_board(board, mark, inarow):
+# assigns a numerical score to a board, depending on the number of beneficial windows to each player
+# beneficial moves to the player get a positive score
+# beneficial moves to the opponent get a negative score
+# the magnitude of the score of each individual window depends on its urgency
     score = 0
-    score -= 1e6 * count_window(board=board, window_size=x, num_discs=x, mark=3-mark)
-    score += 1e4 * count_window(board=board, window_size=x, num_discs=x, mark=mark)
-    score -= 1e2 * count_window(board=board, window_size=x, num_discs=x-1, mark=3-mark)
-    score += 1e0 * count_window(board=board, window_size=x, num_discs=x-1, mark=mark)
+    score -= 1e6 * count_window(board=board, window_size=inarow, num_discs=inarow, mark=3 - mark)
+    score += 1e4 * count_window(board=board, window_size=inarow, num_discs=inarow, mark=mark)
+    score -= 1e2 * count_window(board=board, window_size=inarow, num_discs=inarow - 1, mark=3 - mark)
+    score += 1e0 * count_window(board=board, window_size=inarow, num_discs=inarow - 1, mark=mark)
     return score
 
-def n_look_ahead(board, mark, max_steps, x, step=1, player=None):
+def n_look_ahead(board, mark, max_steps, inarow, step=1, player=None):
     if player == None:
         player = mark  # initializes the player according to the mark at step 1
     valid_moves = get_valid_moves(board)
@@ -93,7 +106,7 @@ def n_look_ahead(board, mark, max_steps, x, step=1, player=None):
         scores = []
         for col in valid_moves:
             next_board = get_next_board(board=board, col=col, mark=mark)
-            score = evaluate_board(board=next_board, mark=player, x=x)
+            score = evaluate_board(board=next_board, mark=player, inarow=inarow)
             scores.append(score)
         return max(scores)  # return the col that corresponds to the max(scores)
     else:
@@ -102,7 +115,7 @@ def n_look_ahead(board, mark, max_steps, x, step=1, player=None):
         scores = []
         for col in valid_moves:
             next_board = get_next_board(board=board, col=col, mark=mark)
-            score = n_look_ahead(board=next_board, mark=next_mark, max_steps=max_steps, x=x, step=next_step, player=player)
+            score = n_look_ahead(board=next_board, mark=next_mark, max_steps=max_steps, inarow=inarow, step=next_step, player=player)
             scores.append(score)
         if step == 1:
             max_indices = [index for index, val in enumerate(scores) if val == max(scores)]
@@ -112,16 +125,16 @@ def n_look_ahead(board, mark, max_steps, x, step=1, player=None):
         else:
             return min(scores)
 
-def alpha_beta(board, mark, max_steps, x, step=0, player=None, alpha=float('-inf'), beta=float('inf')):
+def alpha_beta(board, mark, max_steps, inarow, step=0, player=None, alpha=float('-inf'), beta=float('inf')):
     if player == None:
         player = mark
-    if step == max_steps or get_terminal_state(board=board, x=x):
-        return evaluate_board(board=board, mark=player, x=x)  # evaluate board from the player's perspective
+    if step == max_steps or get_terminal_state(board=board, inarow=inarow):
+        return evaluate_board(board=board, mark=player, inarow=inarow)  # evaluate board from the player's perspective
     valid_moves = get_valid_moves(board=board)
     scores = []
     for col in valid_moves:
         next_board = get_next_board(board=board, col=col, mark=mark)
-        score = alpha_beta(board=next_board, mark=3-mark, max_steps=max_steps, x=x, step=step+1, player=player, alpha=alpha, beta=beta)
+        score = alpha_beta(board=next_board, mark=3-mark, max_steps=max_steps, inarow=inarow, step=step + 1, player=player, alpha=alpha, beta=beta)
         scores.append(score)
         if mark == player:  # if maximizing agent
             alpha = max(alpha, score)
@@ -161,25 +174,30 @@ def print_grid(grid):
     def get_char(val):
         chars = [' ', 'X', 'O']
         return chars[val]
-    rows, cols, indent = len(grid), len(grid[0]), 10
+    rows, cols = grid.shape
+    indent = 10
+    # column headers
     print('\n'+' '*indent, end='')
     for col in range(cols):
-        print(f'  {col + 1} ', end='')
+        print(f'  {col+1} ', end='')
     # top border
     print('\n'+' '*indent, end='')
     print('-'*(4*cols+1), end='')
-    # fill
+    # board
     for row in range(rows):
         print('\n'+' ' * indent, end='')
         for col in range(cols):
-            print(f'| {get_char(grid[row, col])} ', end='')
+            piece = get_char(grid[row, col])
+            print(f'| {piece} ', end='')
         print('|', end='')
     # bottom border
     print('\n'+' '*indent, end='')
     print(f'{"-" * (4 * cols + 1)}')
 
-def get_terminal_state(board, x):
-    c1 = board.all()  # draw
-    c2 = (count_window(board=board, window_size=x, num_discs=x, mark=1) > 0)  # player 1 win
-    c3 = (count_window(board=board, window_size=x, num_discs=x, mark=2) > 0)  # player 2 win
-    return (c1 or c2 or c3)
+def get_terminal_state(board, inarow):
+    if (count_window(board=board, window_size=inarow, num_discs=inarow, mark=1) > 0):  # condition 1: player 1 win
+        return True
+    if (count_window(board=board, window_size=inarow, num_discs=inarow, mark=2) > 0):  # condition2: player 2 win
+        return True
+    if board[0].all():  # condition 3: draw
+        return True

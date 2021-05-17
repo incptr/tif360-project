@@ -4,7 +4,7 @@ from Game import Game
 n_games = 1000
 
 # choosing agents
-path = 'strat_v2.pt'
+path = 'strat_v3.pt'
 agent1 = DQN_Agent(load_path=path)
 agent2 = One_step_ahead()
 agents = [agent1, agent2]

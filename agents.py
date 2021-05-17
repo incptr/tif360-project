@@ -104,10 +104,8 @@ class DQN_Agent:
         return state
 
     def __call__(self, game):
-        if self.training_mode:  # allowing exploration
-            self.epsilon = max(self.epsilon_min, self.epsilon - 1/self.epsilon_scale)
-            if random.random() < self.epsilon:
-                return random.randrange(self.cols)  # returns a random column, which may be invalid
+        if self.training_mode and (random.random() < self.epsilon):  # allowing exploration
+            return random.randrange(self.cols)  # returns a random column, which may be invalid
         x = self.format_board(game.board, game.mark)
         out = self.pol_net(x)  # Q-values (one per column)
         return out.argmax().item()  # selects the column with the highest Q-value
@@ -133,10 +131,11 @@ class DQN_Agent:
         loss.backward()
         optimizer.step()
 
-    def train(self, n_episodes=5000, epsilon_min=0.001, epsilon_scale=10000, opponent=Random(), buffer_size=4200, batch_size=32, lr=0.01, save_path=''):
+    def train(self, n_episodes=5000, epsilon_start=1, epsilon_min=0.001, epsilon_scale=10000, opponent=Random(), buffer_size=4200, batch_size=32, lr=0.01, save_path=''):
         start = timer()
+        time1 = start
         self.training_mode = True
-        self.epsilon = 1
+        self.epsilon = epsilon_start
         self.epsilon_min = epsilon_min
         self.epsilon_scale = epsilon_scale
         criterion = torch.nn.MSELoss()
@@ -199,20 +198,24 @@ class DQN_Agent:
                     if update_count % 100 == 0:
                         self.tar_net.load_state_dict(self.pol_net.state_dict())  # updating target net
             if (count_episode+1) % 100 == 0:
-                reward_avg = mean(reward_tot[-100:])
+                reward_avg = mean(reward_tot)
                 end = timer()
-                print(f'Training progress: {100*(count_episode+1)/n_episodes}%, Average reward = {reward_avg}, Last epsilon: {self.epsilon:.2f}, Time elapsed: {timedelta(seconds=end-start)}.')
+                print(f'Training progress: {100*(count_episode+1)/n_episodes}%, Episode: {(count_episode+1)}, Average reward: {reward_avg}, Last epsilon: {self.epsilon:.2f}, Interval: {timedelta(seconds=end-time1)}, Time elapsed: {timedelta(seconds=end-start)}.')
+                reward_tot = []
+                time1 = end
+                if ((count_episode+1) % 1000 == 0) and save_path:
+                    torch.save(self.pol_net, save_path)
+                    print(f'Policy network saved to {save_path} at Episode {(count_episode+1)}.')
+            self.epsilon = max(self.epsilon_min, self.epsilon - 1 / self.epsilon_scale)  # updating epsilon
         # end of n_episodes loop
-        if save_path:
-            torch.save(self.pol_net, save_path)
-            print(f'Policy network saved to {save_path}')
         self.training_mode = False
+        print('Training finished.')
 
 
 if __name__ == '__main__':
-    load_path = 'strat_v2.pt'
-    save_path = 'strat_v3.pt'
-    n_episodes = 50000
+    load_path = 'strat_v3.pt'
+    save_path = 'strat_v4.pt'
+    n_episodes = 100000
     agent = DQN_Agent(load_path=load_path)
-    opponent = One_step_ahead()
-    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=opponent)
+    # opponent = One_step_ahead()
+    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=agent, epsilon_scale=(n_episodes/2), epsilon_start=1)

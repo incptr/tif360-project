@@ -226,15 +226,15 @@ def count_windows(grid,obs):
     for row in range(obs.rows-(obs.x-1)):
         for col in range(obs.cols-(obs.x-1)):
             window = list(grid[range(row, row+obs.x), range(col, col+obs.x)])
-            windows[1][pieces_in_window(window, 1)]+=1
-            windows[2][pieces_in_window(window, 2)]+=1
+            windows[1][pieces_in_window(window, 1,obs)]+=1
+            windows[2][pieces_in_window(window, 2,obs)]+=1
 
     # negative diagonal
     for row in range(obs.x-1, obs.rows):
         for col in range(obs.cols-(obs.x-1)):
             window = list(grid[range(row, row-obs.x, -1), range(col, col+obs.x)])
-            windows[1][pieces_in_window(window, 1)]+=1
-            windows[2][pieces_in_window(window, 2)]+=1
+            windows[1][pieces_in_window(window, 1,obs)]+=1
+            windows[2][pieces_in_window(window, 2,obs)]+=1
     return windows
             
 # Calculates value of heuristic for grid
@@ -259,7 +259,7 @@ def alphabeta(node, depth, a, b, maximizingPlayer, mark,obs):
     is_terminal = is_terminal_node(node,obs)
     valid_moves = [c for c in range(obs.cols) if node[0][c] == 0]
     if depth == 0 or is_terminal:
-        return get_heuristic(node, mark)
+        return get_heuristic(node, mark,obs)
     if maximizingPlayer:
         value = -np.Inf
         for col in valid_moves:

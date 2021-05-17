@@ -1,5 +1,6 @@
 import random
 from functions import *
+import numpy as np
 
 class Leftmost:
     def __call__(self, obs):
@@ -72,3 +73,32 @@ class AB_agent():
         if revised_valid_moves:  # if there are non-enabling moves
             return random.choice(revised_valid_moves)
         return random.choice(valid_moves)
+        
+        
+class Alphabeta_agent():
+    def __init(self):    
+        print("Step {}: AphaBeta Agent moving".format(obs.step))
+
+
+    def __call__(self,obs):
+
+        # Get list of valid moves
+        valid_moves = get_valid_moves(obs.board)#[c for c in range(obs.cols) if obs.board[c] == 0]
+        # Convert the board to a 2D grid
+        grid = np.asarray(obs.board).reshape(obs.rows, obs.cols)
+
+        board_array = np.ndarray.tolist(obs.board)
+
+        n_steps = 4 if board_array.count(0)>len(board_array)*2/3 else 5 if board_array.count(0)>len(board_array)/3 else 6
+        # Use the heuristic to assign a score to each possible board in the next step
+        scores = dict(zip(valid_moves, [score_move(grid, col, obs.mark, n_steps,obs) for col in valid_moves]))
+        print("Scores:", scores, end=' - ')
+        # Get a list of columns (moves) that maximize the heuristic
+        max_cols = [key for key in scores.keys() if scores[key] == max(scores.values())]
+        # Select at random from the maximizing columns
+        move = random.choice(max_cols)
+        print("Selected move:", move)
+        return move
+
+
+

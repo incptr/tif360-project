@@ -1,3 +1,5 @@
+import numpy as np
+
 def get_valid_moves(board):
     valid_moves = []
     cols = board.shape[1]
@@ -183,3 +185,96 @@ def get_terminal_state(board, x):
     c2 = (count_window(board=board, window_size=x, num_discs=x, mark=1) > 0)  # player 1 win
     c3 = (count_window(board=board, window_size=x, num_discs=x, mark=2) > 0)  # player 2 win
     return (c1 or c2 or c3)
+
+
+
+# ALPHABETA
+
+# Gets board at next step if agent drops piece in selected column
+def drop_piece(grid, col, mark):
+    board_arrary = np.ndarray.tolist(grid)
+    next_grid = grid.copy()
+    for row in range(len(grid[:,0])-1, -1, -1):
+        if next_grid[row][col] == 0:
+            break
+    next_grid[row][col] = mark
+    return next_grid
+
+# Get the number of pieces of the same mark in a window
+def pieces_in_window(window, piece,obs):
+    return window.count(piece) * (window.count(piece) + window.count(0) == obs.x)
+
+# Counts number of pieces for both players for every possible window
+def count_windows(grid,obs):
+    windows = {piece: [0 for i in range(obs.x+1)] for piece in [1, 2]}
+    
+    # horizontal
+    for row in range(obs.rows):
+        for col in range(obs.cols-(obs.x-1)):
+            window = list(grid[row, col:col+obs.x])
+            windows[1][pieces_in_window(window, 1,obs)]+=1
+            windows[2][pieces_in_window(window, 2,obs)]+=1
+
+    # vertical
+    for row in range(obs.rows-(obs.x-1)):
+        for col in range(obs.cols):
+            window = list(grid[row:row+obs.x, col])
+            windows[1][pieces_in_window(window, 1,obs)]+=1
+            windows[2][pieces_in_window(window, 2,obs)]+=1
+
+    # positive diagonal
+    for row in range(obs.rows-(obs.x-1)):
+        for col in range(obs.cols-(obs.x-1)):
+            window = list(grid[range(row, row+obs.x), range(col, col+obs.x)])
+            windows[1][pieces_in_window(window, 1)]+=1
+            windows[2][pieces_in_window(window, 2)]+=1
+
+    # negative diagonal
+    for row in range(obs.x-1, obs.rows):
+        for col in range(obs.cols-(obs.x-1)):
+            window = list(grid[range(row, row-obs.x, -1), range(col, col+obs.x)])
+            windows[1][pieces_in_window(window, 1)]+=1
+            windows[2][pieces_in_window(window, 2)]+=1
+    return windows
+            
+# Calculates value of heuristic for grid
+def get_heuristic(grid, mark,obs):
+    windows=count_windows(grid,obs)
+    score =  windows[mark][1] + windows[mark][2]*3 + windows[mark][3]*9 + windows[mark][4]*81 - windows[mark%2+1][1] - windows[mark%2+1][2]*3 - windows[mark%2+1][3]*9 - windows[mark%2+1][4]*81
+    return score
+
+# Uses alphabeta to calculate value of dropping piece in selected column
+def score_move(grid, col, mark, nsteps,obs):
+    next_grid = drop_piece(grid, col, mark)
+    score = alphabeta(next_grid, nsteps-1, -np.Inf, np.Inf, False, mark,obs)
+    return score
+
+# Checks if game has ended
+def is_terminal_node(grid,obs):
+    windows=count_windows(grid,obs)
+    return windows[1][obs.x] + windows[2][obs.x] > 0
+
+# Alpha Beta pruning implementation
+def alphabeta(node, depth, a, b, maximizingPlayer, mark,obs):
+    is_terminal = is_terminal_node(node,obs)
+    valid_moves = [c for c in range(obs.cols) if node[0][c] == 0]
+    if depth == 0 or is_terminal:
+        return get_heuristic(node, mark)
+    if maximizingPlayer:
+        value = -np.Inf
+        for col in valid_moves:
+            child = drop_piece(node, col, mark)
+            value = max(value, alphabeta(child, depth-1, a, b, False, mark,obs))
+            a = max(a, value)
+            if a >= b:
+                break # β cutoff
+        return value
+    else:
+        value = np.Inf
+        for col in valid_moves:
+            child = drop_piece(node, col, mark%2+1)
+            value = min(value, alphabeta(child, depth-1, a, b, True, mark,obs))
+            b = min(b, value)
+            if b <= a:
+                break # α cutoff
+        return value

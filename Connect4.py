@@ -1,6 +1,5 @@
 import numpy as np
 import random
-import copy
 
 
 
@@ -15,19 +14,27 @@ import copy
 
 class Game :
     def __init__(self, player):
-        self.state = np.zeros((6,7))
         self.player = player
+        self.num_of_rows = 6
+        self.num_of_columns = 7
+        self.in_row = 4
+        self.board = np.zeros((self.num_of_rows,self.num_of_columns))
+        self.terminal_state = False
+        self.winner = -1
+        self.reward = 0
 
     def new_game(self, player):
-        self.state = np.zeros((6,7))
+        self.board = np.zeros((self.num_of_rows,self.num_of_columns))
         self.player = player
+        self.terminal_state = False
+        self.winner = -1
 
 
-    # Function to print the board if one wants to see what is happening or use it for manuallay play 
+    # Function to print the board if one wants to see what is happening or use it for manuallay play only works for the standard setup 
     def print_board(self) :
         print('0  1  2  3  4  5  6')
         print('-------------------', end ='')        
-        for i in self.state :
+        for i in self.board :
             print('')
             for j in i :
                 if j == 0 :
@@ -38,74 +45,87 @@ class Game :
                     print('O', ' ', end = '')
 
 
-    # Check if a m ove is valid
+    # Check if a move is valid
     def valid_move(self, move) :
-        if self.state[0][move] == 0 :
+        if self.board[0][move] == 0 :
             return True
         else :
             return False 
 
     # Make a move, if the column of the move is full it does nothing, if move is larger than 6 it crashes. Easy to make the validation here if one wants to.   
     def make_move(self, move) :
-        done = False
-        for i in range(5, -1, -1) :
-            if self.state[i][move] == 0 and not done :      
-                self.state[i][move] = self.player
-                if self.player == 1 :
-                    self.player = 2
-                else :
-                    self.player = 1
-                done = True
+        for i in range(self.num_of_rows-1, -1, -1) :
+            if self.board[i][move] == 0:      
+                self.board[i][move] = self.player
+                if self.check_win():
+                    self.terminal_state = True
+                    self.winner = self.player
+                    self.reward = 1
+                elif self.is_tie():
+                    self.terminal_state = True
+                    self.winner = 0
+                    self.reward = 0
+                else:
+                    if self.player == 1 :
+                        self.player = 2
+                    else :
+                        self.player = 1
+                break
 
     # get all valid moves
     def get_valid_moves(self) :
         vm = []
-        for i in range (0, 7) :
+        for i in range (0, self.num_of_columns) :
             if self.valid_move(i) :
                 vm.append(i)
         return vm
 
     # Check if a position as a winning one, returns True if player has won, False otherwise.     
-    def winning_position (self, player) :                    
-        # Check rows
-        for i in range(5, -1, -1) :
-            r = self.state[i]
-            for j in range (0, 4) :
-                if r[j] != 0 and r[j] == player and r[j] == r[j+1] and r[j+1] == r[j+2] and r[j+2] == r[j+3] :
-                    return True       
-        # Check columns
-        for i in range (0, 7) :
-            for j in range(5, 2, -1) :
-                if self.state[j][i] !=0 and self.state[j][i] == player and self.state[j][i] == self.state[j-1][i] and self.state[j-1][i] == self.state[j-2][i] and self.state[j-2][i] == self.state[j-3][i] :
+
+    def check_win(self):
+        # horizontal
+        for row in range(self.num_of_rows):
+            for col in range(self.num_of_columns - self.in_row + 1):
+                window = self.board[row, col:col + self.in_row]
+                if np.count_nonzero(window == self.player) == self.in_row:
                     return True
-        # Check diagonals
-        for i in range(5, 2, -1) :
-            # Diagonals to the right
-            for j in range(0, 4) :
-                if self.state[i][j] != 0 and self.state[i][j] == player and self.state[i][j] == self.state[i-1][j+1] and self.state[i-1][j+1] == self.state[i-2][j+2] and self.state[i-2][j+2] == self.state[i-3][j+3] :
+        # vertical
+        for row in range(self.num_of_rows - self.in_row + 1):
+            for col in range(self.num_of_columns):
+                window = self.board[row:row + self.in_row, col]
+                if np.count_nonzero(window == self.player) == self.in_row:
                     return True
-            # Diagonals to the left
-            for j in range(6, 2, -1) :
-                if self.state[i][j] != 0 and self.state[i][j]== player and self.state[i][j] == self.state[i-1][j-1] and self.state[i-1][j-1] == self.state[i-2][j-2] and self.state[i-2][j-2] == self.state[i-3][j-3] :
-                    return True  
+        # diagonal
+        for row in range(self.num_of_rows - self.in_row + 1):
+            for col in range(self.num_of_columns - self.in_row + 1):
+                window = self.board[range(row, row + self.in_row), range(col, col + self.in_row)]
+                if np.count_nonzero(window == self.player) == self.in_row:
+                    return True
+        # off-diagonal
+        for row in range(self.in_row - 1, self.num_of_rows):
+            for col in range(self.num_of_columns - self.in_row + 1):
+                window = self.board[range(row, row - self.in_row, -1), range(col, col + self.in_row)]
+                if np.count_nonzero(window == self.player) == self.in_row:
+                    return True
         return False
+
 
     # Check if Tie, returns True if it is a Tie, False otherwise 
     def is_tie(self):
-        if np.all((self.state[0] != 0)):
+        if np.all((self.board[0] != 0)):
             return True
         else:
             return False
 
-
+"""
 class randomagent:
     def __init__(self, game):
         self.game = game
         self.num_of_games = 0
     
     def choose_move(self):               
-        action = random.choice(self.game.get_valid_moves())
-        return int(action)
+        move = random.choice(self.game.get_valid_moves())
+        return int(move)
 
 #Instanciate a game
 game = Game(random.choice([1,2]))
@@ -124,24 +144,20 @@ while True:
         game.make_move(move)
         print('')
         game.print_board()
-        print('')
-        game.player = 2
+        print('')     
     elif game.player == 2 :
         move = int(input('Make your move, (0-6): '))
         game.make_move(move)
         print('')
         game.print_board()
         print('')
-        game.player = 1 
 
-    if game.winning_position(1) :
-        print('The agent won')
-        break
-
-    if game.winning_position(2) :
-        print('You won')
-        break
-
-    if game.is_tie():
-        print('It was a tie')
-        break
+    if game.terminal_state:
+        if game.winner == 0:
+            print('It was a tie')
+        else:
+            print(f'Player {game.winner} won')
+        print('***** New game *****')
+        game.new_game(random.choice([1,2]))
+        game.print_board()
+"""

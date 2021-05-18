@@ -131,13 +131,12 @@ def create_training_data(num_of_games):
                         i[2] = 1
                     for i in episode_buffer2 :
                         i[2] = -1
-                    break
                 elif game.winner == 2: 
                     for i in episode_buffer1 :
                         i[2] = -1
                     for i in episode_buffer2 :
                         i[2] = 1
-                    break
+                break
 
         exp_buffer.add_new_experience(episode_buffer1)
         exp_buffer.add_new_experience(episode_buffer2)

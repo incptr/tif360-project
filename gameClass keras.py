@@ -7,7 +7,6 @@ import connect4models
 import connect4encoders
 import Connect4
 import mcts
-import mcstagent
 
 
 class randomagent:

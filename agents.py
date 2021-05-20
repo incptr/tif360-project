@@ -106,6 +106,9 @@ class DQN_Agent:
     def __call__(self, game):
         if self.training_mode and (random.random() < self.epsilon):  # allowing exploration
             return random.randrange(self.cols)  # returns a random column, which may be invalid
+        winning_column = get_winning_moves(game.board, game.inarow, game.mark, first=True)
+        if winning_column:
+            return winning_column
         x = self.format_board(game.board, game.mark)
         out = self.pol_net(x)  # Q-values (one per column)
         return out.argmax().item()  # selects the column with the highest Q-value
@@ -171,7 +174,7 @@ class DQN_Agent:
                 reward[player_index] = 0
                 if game.drop(action[player_index]):  # if invalid move
                     game.gameover = True
-                    reward[player_index] = -100
+                    reward[player_index] = -1000
                     reward[opponent_index] = 0
                     reward_tot.append(reward[0])
                 elif game.check_win():
@@ -213,9 +216,9 @@ class DQN_Agent:
 
 
 if __name__ == '__main__':
-    load_path = 'strat_v3.pt'
-    save_path = 'strat_v4.pt'
-    n_episodes = 100000
+    load_path = 'strat_v7.pt'
+    save_path = 'strat_v7.pt'
+    n_episodes = 400000
     agent = DQN_Agent(load_path=load_path)
     # opponent = One_step_ahead()
-    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=agent, epsilon_scale=(n_episodes/2), epsilon_start=1)
+    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=agent, epsilon_scale=(n_episodes/2), epsilon_start=0.001)

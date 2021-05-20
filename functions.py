@@ -53,13 +53,15 @@ def count_window(board, window_size, num_discs, mark):
                 count += 1
     return count
 
-def get_winning_moves(board, inarow, mark):
+def get_winning_moves(board, inarow, mark, first=False):
 # returns a list of columns that will result in a game win if they exist
     valid_moves = get_valid_moves(board=board)
     winning_moves = []
     for col in valid_moves:
         next_board = get_next_board(board=board, col=col, mark=mark)
         if count_window(board=next_board, window_size=inarow, num_discs=inarow, mark=mark):
+            if first == True:  # returns the first winning move found, if any
+                return col
             winning_moves.append(col)
     return winning_moves
 

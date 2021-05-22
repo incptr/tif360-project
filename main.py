@@ -4,9 +4,9 @@ from Game import Game
 n_games = 1000
 
 # choosing agents
-path = 'strat_v4.pt'
-agent1 = DQN_Agent(load_path=path)
-agent2 = One_step_ahead()
+path = 'strat_v5.pt'
+agent1 = DQN_Agent()
+agent2 = Random()
 agents = [agent1, agent2]
 
 # instantiating game, and running for n_games

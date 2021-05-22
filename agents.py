@@ -32,7 +32,7 @@ def get_reward(obs,move):
         except:
             #print(scores)
             #print(move) 
-            reward = -1000
+            reward = -10000
             fraction = 0  
                  
        # print("Selected reward:", reward)
@@ -128,7 +128,7 @@ class DQN_Agent:
     # formats the gameboard into a torch array so it can be fed to the DQN
         board = torch.from_numpy(board).flatten()
         discs_player = (board == mark).float()  # vector containing 1 if player disc, 0 otherwise
-        discs_opponent = (board == 3-mark).float()  # vector containing 1 if opponent disc, 0 otherwise
+        discs_opponent = (board == -1+mark).float()  # vector containing 1 if opponent disc, 0 otherwise
         state = torch.cat([discs_player, discs_opponent], 0).unsqueeze(dim=0)
         return state
 
@@ -200,8 +200,17 @@ class DQN_Agent:
                 
                 # run tree search to check reward                
                 # get new state
-                action[player_index] = player(game)
-                reward[player_index],fraction = get_reward(game,action[player_index])
+                columns = get_winning_moves(game.board, game.inarow, game.mark)
+                if columns:  # if there is a winning move
+                    action[player_index] =  random.choice(columns)
+                    reward[player_index],fraction =10000, 1
+                columns = get_blocking_moves(game.board, game.inarow, game.mark)
+                if columns:  # if there is a blocking move
+                    action[player_index] = random.choice(columns)
+                    reward[player_index],fraction =500, 1
+                else:
+                    action[player_index] = player(game)
+                    reward[player_index],fraction = get_reward(game,action[player_index])
                 if game.drop(action[player_index]):  # if invalid move
                     game.gameover = True
                     reward[player_index] = -1000
@@ -236,7 +245,7 @@ class DQN_Agent:
                 reward_tot = []
                 reward_plot.append(reward_avg)
                 time1 = end
-                if ((count_episode+1) % 20 == 0) and save_path:
+                if ((count_episode+1) % 200 == 0) and save_path:
                     torch.save(self.pol_net, save_path)
                     print(f'Policy network saved to {save_path} at Episode {(count_episode+1)}.')
             self.epsilon = max(self.epsilon_min, self.epsilon - 1 / self.epsilon_scale)  # updating epsilon
@@ -248,8 +257,8 @@ class DQN_Agent:
 
 if __name__ == '__main__':
     load_path = 'strat_v3.pt'
-    save_path = 'strat_v4.pt'
-    n_episodes = 40
-    agent = DQN_Agent(load_path=load_path)
+    save_path = 'strat_v5.pt'
+    n_episodes = 8000
+    agent = DQN_Agent()
     # opponent = One_step_ahead()
-    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=One_step_ahead(), epsilon_scale=(n_episodes/2), epsilon_start=1)
+    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=One_step_ahead(), epsilon_scale=(n_episodes), epsilon_start=1)

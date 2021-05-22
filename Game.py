@@ -120,7 +120,7 @@ class Game:
         self.reset()
         while not self.gameover:
             self.play_turn()
-            print_grid(self.board)
+            #print_grid(self.board)
         return self.score
 
     def play_n_games(self, total_games):
@@ -128,7 +128,7 @@ class Game:
         for count_game in range(total_games):
             score = self.play_game()
             scores.append(score)
-            print_grid(self.board)
+            #print_grid(self.board)
             if (count_game + 1) % (total_games // 10) == 0:
                 print(f'\nProgress: {100*(count_game+1)/total_games}%. {count_game+1}/{total_games} played.')
                 print_summary(scores)

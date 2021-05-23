@@ -155,7 +155,12 @@ def alpha_beta(board, mark, max_steps, inarow, step=0, player=None, alpha=float(
         return [valid_moves[i] for i in [j for j, s in enumerate(scores) if s == next_score]]
     return next_score
 
-def print_summary(scores):
+def print_summary(scores, dqn=False):
+    p1 = 'Player 1'
+    p2 = 'Player 2'
+    if dqn == True:
+        p1 = 'DQN Agent'
+        p2 = 'Opponent'
     win1 = scores.count([1, 0])
     win2 = scores.count([0, 1])
     inv1 = scores.count([None, 0])
@@ -164,10 +169,10 @@ def print_summary(scores):
     tot = len(scores)
     other = tot - win1 - win2 - inv1 - inv2 - draw
     print('\nSummary\n' + '=' * 30)
-    print(f'Player 1 wins: {win1}')
-    print(f'Player 2 wins: {win2}')
-    print(f'Player 1 invalid moves: {inv1}')
-    print(f'Player 2 invalid moves: {inv2}')
+    print(f'{p1} wins: {win1}')
+    print(f'{p2} wins: {win2}')
+    print(f'{p1} invalid moves: {inv1}')
+    print(f'{p2} invalid moves: {inv2}')
     print(f'Draws: {draw}')
     print(f'Other: {other}')
     print(f'Total games played: {tot}')

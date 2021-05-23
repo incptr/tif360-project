@@ -134,7 +134,7 @@ class DQN_Agent:
         loss.backward()
         optimizer.step()
 
-    def train(self, n_episodes=5000, epsilon_start=1, epsilon_min=0.001, epsilon_scale=10000, opponent=Random(), buffer_size=4200, batch_size=32, lr=0.01, save_path=''):
+    def train(self, n_episodes=5000, epsilon_start=1, epsilon_min=0.05, epsilon_scale=10000, opponent=Random(), buffer_size=4200, batch_size=32, lr=0.01, save_path=''):
         start = timer()
         time1 = start
         self.training_mode = True
@@ -210,15 +210,16 @@ class DQN_Agent:
                     torch.save(self.pol_net, save_path)
                     print(f'Policy network saved to {save_path} at Episode {(count_episode+1)}.')
             self.epsilon = max(self.epsilon_min, self.epsilon - 1 / self.epsilon_scale)  # updating epsilon
+            game.agents[0], game.agents[1] = game.agents[1], game.agents[0]  # alternating order of players
         # end of n_episodes loop
         self.training_mode = False
         print('Training finished.')
 
 
 if __name__ == '__main__':
-    load_path = 'strat_v7.pt'
-    save_path = 'strat_v7.pt'
-    n_episodes = 400000
+    load_path = ''
+    save_path = 'strat_v8.pt'
+    n_episodes = 100000
     agent = DQN_Agent(load_path=load_path)
-    # opponent = One_step_ahead()
-    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=agent, epsilon_scale=(n_episodes/2), epsilon_start=0.001)
+    opponent = Random()
+    agent.train(n_episodes=n_episodes, save_path=save_path, opponent=agent, epsilon_scale=(n_episodes/2), epsilon_start=1)
